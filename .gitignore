@@ -1,0 +1,21 @@
+# Android / Gradle
+*.iml
+.gradle/
+/local.properties
+/.idea/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
+!debug.keystore
+
+# 本机与环境
+.venv/
+__pycache__/
+*.log
