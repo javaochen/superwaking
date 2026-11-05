@@ -32,6 +32,16 @@ class Store(context: Context) {
         get() = sp.getLong("nextAt", 0L)
         set(v) = sp.edit().putLong("nextAt", v).apply()
 
+    /** 是否允许“响太久就出声”升级 */
+    var soundEnabled: Boolean
+        get() = sp.getBoolean("soundEnabled", true)
+        set(v) = sp.edit().putBoolean("soundEnabled", v).apply()
+
+    /** 响铃多少分钟后开始出声 */
+    var soundAfterMin: Int
+        get() = sp.getInt("soundAfterMin", 5)
+        set(v) = sp.edit().putInt("soundAfterMin", v).apply()
+
     /** 上次检查更新的时间戳，用于 24 小时节流 */
     var lastCheck: Long
         get() = sp.getLong("lastCheck", 0L)

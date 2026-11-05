@@ -57,6 +57,44 @@
             android:layout_height="wrap_content"
             android:text="取消闹钟" />
 
+        <CheckBox
+            android:id="@+id/soundEnabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="响太久就出声（闹钟音量最大化）" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="响满 " />
+
+            <EditText
+                android:id="@+id/soundMinutes"
+                android:layout_width="64dp"
+                android:layout_height="wrap_content"
+                android:inputType="number"
+                android:maxLength="2"
+                android:text="5" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" 分钟仍未被关闭，开始播放闹铃" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnSoundTest"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="测试声音 10 秒（先调成静音再试）" />
+
         <Button
             android:id="@+id/btnTest"
             android:layout_width="match_parent"

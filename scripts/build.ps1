@@ -31,6 +31,8 @@ try {
         $name = 'superwaking-debug.apk'
     }
 
+    if ($LASTEXITCODE -ne 0) { throw "Gradle 构建失败（退出码 $LASTEXITCODE），不复制旧产物" }
+
     if (Test-Path $apk) {
         $dist = Join-Path $proj 'dist'
         New-Item -ItemType Directory -Force $dist | Out-Null

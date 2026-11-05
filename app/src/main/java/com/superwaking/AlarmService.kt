@@ -30,6 +30,9 @@ class AlarmService : Service() {
     private var vibrator: Vibrator? = null
     private var wake: PowerManager.WakeLock? = null
     private val handler = Handler(Looper.getMainLooper())
+
+    /** 独立 Handler：不参与 bringToFront 的批量清理，保证升级计时不被重置 */
+    private val escHandler = Handler(Looper.getMainLooper())
     private var effect: VibrationEffect? = null
 
     private val burst = object : Runnable {
@@ -72,6 +75,13 @@ class AlarmService : Service() {
                 acquire(30 * 60 * 1000L)
             }
 
+        val store = Store(this)
+        if (store.soundEnabled) {
+            val minutes = store.soundAfterMin.coerceIn(1, 60)
+            escHandler.postDelayed({ escalateToSound() }, minutes * 60_000L)
+            Diagnostics.log(this, "sound_scheduled_in_${minutes}min")
+        }
+
         val filter = IntentFilter(Intent.ACTION_SCREEN_OFF)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(screenReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
@@ -90,8 +100,16 @@ class AlarmService : Service() {
         return START_STICKY
     }
 
+    private fun escalateToSound() {
+        if (!Store(this).soundEnabled) return
+        Diagnostics.log(this, "escalate_sound")
+        SoundAlert.play(this)
+    }
+
     override fun onDestroy() {
         Diagnostics.log(this, "service_destroy")
+        escHandler.removeCallbacksAndMessages(null)
+        SoundAlert.stop()
         handler.removeCallbacksAndMessages(null)
         try {
             unregisterReceiver(screenReceiver)

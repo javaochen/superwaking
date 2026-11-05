@@ -12,6 +12,7 @@ import android.os.PowerManager
 import android.os.Vibrator
 import android.provider.Settings
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.TimePicker
@@ -49,6 +50,9 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.btnCancel).setOnClickListener { cancelAll() }
         findViewById<Button>(R.id.btnTest).setOnClickListener { testVibration() }
         findViewById<Button>(R.id.btnNow).setOnClickListener { ringInFiveSeconds() }
+        findViewById<Button>(R.id.btnSoundTest).setOnClickListener { testSound() }
+        findViewById<CheckBox>(R.id.soundEnabled).isChecked = store.soundEnabled
+        findViewById<EditText>(R.id.soundMinutes).setText(store.soundAfterMin.toString())
         findViewById<Button>(R.id.btnPerms).setOnClickListener { permissionsFlow() }
 
         findViewById<Button>(R.id.btnUpdate).apply {
@@ -80,6 +84,9 @@ class MainActivity : Activity() {
         store.sentence = text
         store.hour = picker.hour
         store.minute = picker.minute
+        store.soundEnabled = findViewById<CheckBox>(R.id.soundEnabled).isChecked
+        store.soundAfterMin = findViewById<EditText>(R.id.soundMinutes)
+            .text.toString().toIntOrNull()?.coerceIn(1, 60) ?: 5
         store.enabled = true
         store.chainActive = false
 
@@ -119,6 +126,19 @@ class MainActivity : Activity() {
         AlarmScheduler.schedule(this, t)
         toast("5 秒后响铃，可以直接锁屏观察")
         refresh()
+    }
+
+    private val uiHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private fun testSound() {
+        SoundAlert.play(this)
+        toast("用闹钟音量播放 10 秒；听不到就去查系统「闹钟音量」")
+        uiHandler.postDelayed({ SoundAlert.stop() }, 10_000L)
+    }
+
+    override fun onDestroy() {
+        uiHandler.removeCallbacksAndMessages(null)
+        super.onDestroy()
     }
 
     private fun testVibration() {
@@ -205,6 +225,8 @@ class MainActivity : Activity() {
             appendLine("通知权限：${mark(notif)}")
             appendLine("电池优化：${if (battery) "已忽略 ✓" else "受限 ✗"}")
             appendLine("系统振动开关：${mark(vibOn)}")
+            val (av, amax) = SoundAlert.alarmVolume(this@MainActivity)
+            appendLine("闹钟音量：$av/$amax")
         }
 
         findViewById<TextView>(R.id.diag).text = Diagnostics.tail(this, 12)
