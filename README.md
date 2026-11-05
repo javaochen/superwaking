@@ -55,6 +55,16 @@ Honor 系统设置里仍可关闭振动/强停进程，属物理边界。
 ## 6. 状态
 
 - [x] git 初始化
-- [ ] 决策：开发方式（A/B/C）
-- [ ] 真机验证振动 API 与全屏 Intent
-- [ ] v1 实现
+- [x] 决策：本机便携工具链（`D:\Tools\android`：JDK 17.0.20.1 / Gradle 8.11.1 / SDK 35），不改系统环境变量
+- [x] v1 实现：闹钟链、马达直驱前台服务、锁屏全屏界面、句子门槛、开机/改时间重排
+- [x] 构建通过：`dist\superwaking-debug.apk`（0.8 MB，首次 2m18s）
+- [ ] 真机验证（清单见 `docs/INSTALL.md` 第 4 节）
+- [ ] v2：二维码门槛
+
+## 7. 构建
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File D:\works\app\superwaking\scripts\build.ps1
+```
+
+产物复制到 `dist\superwaking-debug.apk`。工具链全在 `D:\Tools\android`，删除该目录即可完全回滚。

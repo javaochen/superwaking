@@ -1,0 +1,82 @@
+package com.superwaking
+
+import android.app.Activity
+import android.app.NotificationManager
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import android.view.WindowManager
+import android.widget.Button
+import android.widget.EditText
+import android.widget.TextView
+
+/**
+ * 响铃界面：覆盖锁屏、常亮、吞掉返回键。
+ * 只有逐字输入正确句子才会停止振动并排下一次。
+ */
+class AlarmActivity : Activity() {
+
+    private var done = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        } else {
+            @Suppress("DEPRECATION")
+            window.addFlags(
+                WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON
+            )
+        }
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        setContentView(R.layout.activity_alarm)
+
+        val store = Store(this)
+        val input = findViewById<EditText>(R.id.input)
+        val error = findViewById<TextView>(R.id.error)
+        findViewById<TextView>(R.id.target).text = store.sentence
+
+        findViewById<Button>(R.id.btnDone).setOnClickListener {
+            if (normalize(input.text.toString()) == normalize(store.sentence)) {
+                dismissAndClose(store)
+            } else {
+                error.text = "不对，重新输入"
+                input.setText("")
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        try {
+            startService(Intent(this, AlarmService::class.java))
+        } catch (_: Exception) {
+            // 后台上限，忽略
+        }
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onBackPressed() {
+        // 故意什么都不做：返回键不能关闹钟
+    }
+
+    private fun dismissAndClose(store: Store) {
+        done = true
+        store.chainActive = false
+        AlarmScheduler.cancel(this)
+        val next = AlarmScheduler.nextTrigger(store.hour, store.minute)
+        store.nextAt = next
+        AlarmScheduler.schedule(this, next)
+
+        getSystemService(NotificationManager::class.java).cancel(AlarmService.NOTIF_ID)
+        stopService(Intent(this, AlarmService::class.java))
+        finish()
+    }
+
+    private fun normalize(s: String): String =
+        s.replace(Regex("\\s+"), "").trim()
+}
