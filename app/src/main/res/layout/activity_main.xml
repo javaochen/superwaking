@@ -75,6 +75,12 @@
             android:layout_height="wrap_content"
             android:text="检查 / 申请权限" />
 
+        <Button
+            android:id="@+id/btnUpdate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="检查更新" />
+
         <TextView
             android:id="@+id/perms"
             android:layout_width="match_parent"

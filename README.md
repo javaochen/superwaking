@@ -61,7 +61,15 @@ Honor 系统设置里仍可关闭振动/强停进程，属物理边界。
 - [ ] 真机验证（清单见 `docs/INSTALL.md` 第 4 节）
 - [ ] v2：二维码门槛
 
-## 7. 构建
+## 7. 更新机制
+
+- 版本号在 `version.properties`，`versionCode` 必须递增。
+- 应用启动后每 24 小时静默检查一次 `api.github.com/repos/javaochen/superwaking/releases/latest`，也可点「检查更新」。
+- 发现新版本 → 下载到 `cacheDir` → 经自定义 `ContentProvider` 交给系统安装器。系统仍会要求确认安装（Honor 可能多一次安全检测），这是平台边界，不是实现缺陷。
+- 安装器读取 APK 需要「安装未知应用」权限，首次点更新会被引导去开。
+- 签名固定为 `D:\Tools\android\keys\superwaking.jks`（SHA-256 `1D:DE:D5…`）。**该文件丢失后，已安装用户只能卸载重装**；备份在 `D:\Data\backup\superwaking-keys-20261105`，仍需另存一份到云盘或 U 盘。
+
+## 8. 构建
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File D:\works\app\superwaking\scripts\build.ps1

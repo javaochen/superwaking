@@ -50,11 +50,25 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.btnTest).setOnClickListener { testVibration() }
         findViewById<Button>(R.id.btnNow).setOnClickListener { ringInFiveSeconds() }
         findViewById<Button>(R.id.btnPerms).setOnClickListener { permissionsFlow() }
+
+        findViewById<Button>(R.id.btnUpdate).apply {
+            text = "检查更新（当前 ${BuildConfig.VERSION_NAME}）"
+            setOnClickListener { Updater.check(this@MainActivity, silent = false) }
+        }
     }
 
     override fun onResume() {
         super.onResume()
         refresh()
+        autoCheckUpdate()
+    }
+
+    /** 每 24 小时最多静默检查一次；发现新版仍会弹窗 */
+    private fun autoCheckUpdate() {
+        val now = System.currentTimeMillis()
+        if (now - store.lastCheck < 24 * 60 * 60 * 1000L) return
+        store.lastCheck = now
+        Updater.check(this, silent = true)
     }
 
     private fun save() {

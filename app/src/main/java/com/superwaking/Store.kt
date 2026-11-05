@@ -31,4 +31,9 @@ class Store(context: Context) {
     var nextAt: Long
         get() = sp.getLong("nextAt", 0L)
         set(v) = sp.edit().putLong("nextAt", v).apply()
+
+    /** 上次检查更新的时间戳，用于 24 小时节流 */
+    var lastCheck: Long
+        get() = sp.getLong("lastCheck", 0L)
+        set(v) = sp.edit().putLong("lastCheck", v).apply()
 }
