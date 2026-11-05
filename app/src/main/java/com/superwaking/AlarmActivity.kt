@@ -35,6 +35,7 @@ class AlarmActivity : Activity() {
 
         setContentView(R.layout.activity_alarm)
 
+        Diagnostics.log(this, "activity_create")
         val store = Store(this)
         val input = findViewById<EditText>(R.id.input)
         val error = findViewById<TextView>(R.id.error)
@@ -52,11 +53,22 @@ class AlarmActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
+        Diagnostics.log(this, "activity_start")
         try {
             startService(Intent(this, AlarmService::class.java))
-        } catch (_: Exception) {
-            // 后台上限，忽略
+        } catch (e: Exception) {
+            Diagnostics.log(this, "activity_start_service_failed ${e.javaClass.simpleName}")
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Diagnostics.log(this, "activity_stop done=$done")
+    }
+
+    override fun onDestroy() {
+        Diagnostics.log(this, "activity_destroy done=$done")
+        super.onDestroy()
     }
 
     @Deprecated("Deprecated in Java")
@@ -65,6 +77,7 @@ class AlarmActivity : Activity() {
     }
 
     private fun dismissAndClose(store: Store) {
+        Diagnostics.log(this, "dismiss_ok")
         done = true
         store.chainActive = false
         AlarmScheduler.cancel(this)

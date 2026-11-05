@@ -13,6 +13,7 @@ class AlarmReceiver : BroadcastReceiver() {
         val store = Store(context)
         if (!store.enabled) return
 
+        Diagnostics.log(context, "alarm_fire")
         store.chainActive = true
         val app = context.applicationContext
         val svc = Intent(app, AlarmService::class.java)

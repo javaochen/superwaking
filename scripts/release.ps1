@@ -25,7 +25,7 @@ $apk = "$proj\dist\superwaking-$Version.apk"
 if (-not (Test-Path $apk)) { throw "没有找到 $apk" }
 
 git add version.properties
-git -c user.name="openagent" -c user.email="agent@localhost" commit -q -m "release: v$Version ($Code)"
+git -c user.name="openagent" -c user.email="agent@localhost" commit -q --allow-empty -m "release: v$Version ($Code)"
 git tag "v$Version"
 
 git push origin main

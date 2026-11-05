@@ -206,6 +206,8 @@ class MainActivity : Activity() {
             appendLine("电池优化：${if (battery) "已忽略 ✓" else "受限 ✗"}")
             appendLine("系统振动开关：${mark(vibOn)}")
         }
+
+        findViewById<TextView>(R.id.diag).text = Diagnostics.tail(this, 12)
     }
 
     private fun mark(ok: Boolean) = if (ok) "✓" else "✗ 需处理"
