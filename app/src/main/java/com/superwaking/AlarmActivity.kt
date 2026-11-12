@@ -88,11 +88,17 @@ class AlarmActivity : Activity() {
         store.ringCount = 0
         AlarmScheduler.cancel(this)
 
-        if (store.pendingDisableAt > 0) {
-            // 之前申请过关闭，且已经完成今天这一次 → 兑现关闭
+        val now = System.currentTimeMillis()
+        if (store.pendingDisableAt > 0 && now >= store.pendingDisableAt) {
+            // 预约时间已到 → 兑现关闭
             store.enabled = false
             store.pendingDisableAt = 0
             Diagnostics.log(this, "disabled_after_dismiss")
+        } else if (store.pendingDisableAt > 0) {
+            // 预约还没到（例如 6:55 申请、7:00 完成）→ 明天照常响
+            store.nextAt = AlarmScheduler.nextTrigger(store.hour, store.minute)
+            AlarmScheduler.schedule(this, store.nextAt)
+            Diagnostics.log(this, "pending_disable_not_yet")
         } else {
             val next = AlarmScheduler.nextTrigger(store.hour, store.minute)
             store.nextAt = next
