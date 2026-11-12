@@ -42,6 +42,19 @@ class Store(context: Context) {
         get() = sp.getInt("soundAfterMin", 5)
         set(v) = sp.edit().putInt("soundAfterMin", v).apply()
 
+    /**
+     * 预约关闭时间戳。>0 表示已申请关闭但尚未生效；
+     * 到点之前闹钟照常响，避免半睡状态下把自己“关掉”。
+     */
+    var pendingDisableAt: Long
+        get() = sp.getLong("pendingDisableAt", 0L)
+        set(v) = sp.edit().putLong("pendingDisableAt", v).apply()
+
+    /** 本次响铃已经是第几次（未完成就续响一次 +1） */
+    var ringCount: Int
+        get() = sp.getInt("ringCount", 0)
+        set(v) = sp.edit().putInt("ringCount", v).apply()
+
     /** 上次检查更新的时间戳，用于 24 小时节流 */
     var lastCheck: Long
         get() = sp.getLong("lastCheck", 0L)

@@ -2,6 +2,7 @@ package com.superwaking
 
 import android.Manifest
 import android.app.Activity
+import android.app.AlertDialog
 import android.app.NotificationManager
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -20,6 +21,9 @@ import android.widget.Toast
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+private const val TWO_HOURS = 2 * 60 * 60 * 1000L
+private const val TWELVE_HOURS = 12 * 60 * 60 * 1000L
 
 class MainActivity : Activity() {
 
@@ -47,7 +51,7 @@ class MainActivity : Activity() {
         )
 
         findViewById<Button>(R.id.btnSave).setOnClickListener { save() }
-        findViewById<Button>(R.id.btnCancel).setOnClickListener { cancelAll() }
+        findViewById<Button>(R.id.btnCancel).setOnClickListener { requestDisableToggle() }
         findViewById<Button>(R.id.btnTest).setOnClickListener { testVibration() }
         findViewById<Button>(R.id.btnNow).setOnClickListener { ringInFiveSeconds() }
         findViewById<Button>(R.id.btnSoundTest).setOnClickListener { testSound() }
@@ -81,9 +85,28 @@ class MainActivity : Activity() {
             toast("句子太短，至少 4 个字")
             return
         }
+        val h = picker.hour
+        val m = picker.minute
+        val changed = text != store.sentence || h != store.hour || m != store.minute
+        val hoursLeft = store.nextAt - System.currentTimeMillis()
+        val soon = store.enabled && hoursLeft in 1L..TWELVE_HOURS
+
+        if (changed && soon) {
+            requireSentence(
+                "修改承诺",
+                "距离下次响铃不到 12 小时。改时间或改句子，要先输入当前句子。"
+            ) { applySave(text, h, m) }
+        } else {
+            applySave(text, h, m)
+        }
+    }
+
+    private fun applySave(text: String, h: Int, m: Int) {
         store.sentence = text
-        store.hour = picker.hour
-        store.minute = picker.minute
+        store.hour = h
+        store.minute = m
+        store.pendingDisableAt = 0
+        store.ringCount = 0
         store.soundEnabled = findViewById<CheckBox>(R.id.soundEnabled).isChecked
         store.soundAfterMin = findViewById<EditText>(R.id.soundMinutes)
             .text.toString().toIntOrNull()?.coerceIn(1, 60) ?: 5
@@ -102,15 +125,47 @@ class MainActivity : Activity() {
         refresh()
     }
 
-    private fun cancelAll() {
-        store.enabled = false
-        store.chainActive = false
-        AlarmScheduler.cancel(this)
-        stopService(Intent(this, AlarmService::class.java))
-        getSystemService(NotificationManager::class.java).cancel(AlarmService.NOTIF_ID)
-        toast("已取消")
-        refresh()
+    /**
+     * 关闭闹钟不再是开关，而是一次“申请”：
+     * 1. 必须输入当前句子；
+     * 2. 预约 2 小时后生效 —— 6:55 想关掉 7:00 的闹钟，来不及。
+     */
+    private fun requestDisableToggle() {
+        if (store.pendingDisableAt > 0) {
+            store.pendingDisableAt = 0
+            toast("已撤销关闭申请，闹钟继续")
+            refresh()
+            return
+        }
+        if (!store.enabled) {
+            toast("当前没有启用的闹钟")
+            return
+        }
+        requireSentence(
+            "申请关闭",
+            "关闭不会立刻生效：会预约在 2 小时后。这期间下一次响铃仍会照常。"
+        ) {
+            store.pendingDisableAt = System.currentTimeMillis() + TWO_HOURS
+            toast("已预约 2 小时后关闭")
+            refresh()
+        }
     }
+
+    private fun requireSentence(title: String, message: String, onOk: () -> Unit) {
+        val input = EditText(this).apply { hint = "输入当前句子" }
+        AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setView(input)
+            .setPositiveButton("确认") { _, _ ->
+                if (norm(input.text.toString()) == norm(store.sentence)) onOk()
+                else toast("句子不对，未生效")
+            }
+            .setNegativeButton("算了", null)
+            .show()
+    }
+
+    private fun norm(s: String) = s.replace(Regex("\\s+"), "").trim()
 
     /** 不等到点，直接把整条流程跑一遍：响铃 → 全屏界面 → 输句子。 */
     private fun ringInFiveSeconds() {
@@ -202,12 +257,21 @@ class MainActivity : Activity() {
 
     private fun refresh() {
         val fmt = SimpleDateFormat("MM-dd HH:mm", Locale.getDefault())
-        status.text = if (store.enabled) {
-            val chain = if (store.chainActive) "（正在响，未完成）" else ""
-            "已启用 · 每天 ${"%02d:%02d".format(store.hour, store.minute)}$chain\n下次：${fmt.format(Date(store.nextAt))}"
-        } else {
-            "未启用"
+        status.text = buildString {
+            if (store.enabled) {
+                val chain = if (store.chainActive) "（正在响，未完成）" else ""
+                append("已启用 · 每天 ${"%02d:%02d".format(store.hour, store.minute)}$chain")
+                append("\n下次：${fmt.format(Date(store.nextAt))}")
+            } else {
+                append("未启用")
+            }
+            if (store.pendingDisableAt > 0) {
+                append("\n已预约关闭：${fmt.format(Date(store.pendingDisableAt))} 生效")
+            }
         }
+
+        findViewById<Button>(R.id.btnCancel).text =
+            if (store.pendingDisableAt > 0) "撤销关闭申请" else "申请关闭闹钟（需验证）"
 
         val nm = getSystemService(NotificationManager::class.java)
         val exact = AlarmScheduler.canScheduleExact(this)

@@ -21,17 +21,21 @@ $ver = Get-Content (Join-Path $proj 'version.properties') | ForEach-Object {
 
 Push-Location $proj
 try {
+    # 输出重定向到文件：Gradle 守护进程会继承控制台句柄，直接输出会让调用方管道挂住
+    $log = Join-Path $env:TEMP 'superwaking-gradle.log'
     if ($Release) {
-        & (Join-Path $gradle.FullName 'bin\gradle.bat') assembleRelease
+        & (Join-Path $gradle.FullName 'bin\gradle.bat') assembleRelease *> $log
         $apk = Join-Path $proj 'app\build\outputs\apk\release\app-release.apk'
         $name = "superwaking-$ver.apk"
     } else {
-        & (Join-Path $gradle.FullName 'bin\gradle.bat') assembleDebug
+        & (Join-Path $gradle.FullName 'bin\gradle.bat') assembleDebug *> $log
         $apk = Join-Path $proj 'app\build\outputs\apk\debug\app-debug.apk'
         $name = 'superwaking-debug.apk'
     }
+    $code = $LASTEXITCODE
+    Get-Content $log -Tail 12
 
-    if ($LASTEXITCODE -ne 0) { throw "Gradle 构建失败（退出码 $LASTEXITCODE），不复制旧产物" }
+    if ($code -ne 0) { throw "Gradle 构建失败（退出码 $code），不复制旧产物" }
 
     if (Test-Path $apk) {
         $dist = Join-Path $proj 'dist'

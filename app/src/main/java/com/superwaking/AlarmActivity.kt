@@ -40,6 +40,11 @@ class AlarmActivity : Activity() {
         val input = findViewById<EditText>(R.id.input)
         val error = findViewById<TextView>(R.id.error)
         findViewById<TextView>(R.id.target).text = store.sentence
+        findViewById<TextView>(R.id.count).text = if (store.ringCount > 1) {
+            "第 ${store.ringCount} 次响了。你已经拖了 ${(store.ringCount - 1) * 2} 分钟。"
+        } else {
+            "第一次响。把它当作今天的第一件事。"
+        }
 
         findViewById<Button>(R.id.btnDone).setOnClickListener {
             if (normalize(input.text.toString()) == normalize(store.sentence)) {
@@ -80,10 +85,19 @@ class AlarmActivity : Activity() {
         Diagnostics.log(this, "dismiss_ok")
         done = true
         store.chainActive = false
+        store.ringCount = 0
         AlarmScheduler.cancel(this)
-        val next = AlarmScheduler.nextTrigger(store.hour, store.minute)
-        store.nextAt = next
-        AlarmScheduler.schedule(this, next)
+
+        if (store.pendingDisableAt > 0) {
+            // 之前申请过关闭，且已经完成今天这一次 → 兑现关闭
+            store.enabled = false
+            store.pendingDisableAt = 0
+            Diagnostics.log(this, "disabled_after_dismiss")
+        } else {
+            val next = AlarmScheduler.nextTrigger(store.hour, store.minute)
+            store.nextAt = next
+            AlarmScheduler.schedule(this, next)
+        }
 
         getSystemService(NotificationManager::class.java).cancel(AlarmService.NOTIF_ID)
         stopService(Intent(this, AlarmService::class.java))
