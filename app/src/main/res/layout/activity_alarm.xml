@@ -24,6 +24,14 @@
         android:textSize="14sp" />
 
     <TextView
+        android:id="@+id/contract"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="16dp"
+        android:textColor="#1565C0"
+        android:textSize="17sp" />
+
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="20dp"

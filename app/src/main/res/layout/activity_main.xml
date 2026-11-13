@@ -44,6 +44,19 @@
             android:hint="例如：我起来了，今天要完成X"
             android:inputType="text" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingTop="12dp"
+            android:text="明天起床后第一件事（睡前写，响铃时显示）" />
+
+        <EditText
+            android:id="@+id/contract"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="例如：把高数作业第一题做完"
+            android:inputType="text" />
+
         <Button
             android:id="@+id/btnSave"
             android:layout_width="match_parent"

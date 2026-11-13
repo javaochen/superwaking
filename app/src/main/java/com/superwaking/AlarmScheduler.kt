@@ -57,4 +57,45 @@ object AlarmScheduler {
     fun cancel(context: Context) {
         context.getSystemService(AlarmManager::class.java).cancel(pendingIntent(context))
     }
+
+    // ---- 每晚 22:30 的“睡前契约”提醒，与主闹钟相互独立 ----
+
+    const val ACTION_CONTRACT = "com.superwaking.action.CONTRACT"
+    private const val REQ_CONTRACT = 2001
+    private const val CONTRACT_HOUR = 22
+    private const val CONTRACT_MINUTE = 30
+
+    fun nextContract(now: Long = System.currentTimeMillis()): Long {
+        val c = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, CONTRACT_HOUR)
+            set(Calendar.MINUTE, CONTRACT_MINUTE)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        if (c.timeInMillis <= now) c.add(Calendar.DAY_OF_YEAR, 1)
+        return c.timeInMillis
+    }
+
+    private fun contractIntent(context: Context): PendingIntent {
+        val i = Intent(context, ContractReceiver::class.java).setAction(ACTION_CONTRACT)
+        return PendingIntent.getBroadcast(
+            context, REQ_CONTRACT, i,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+    }
+
+    fun scheduleContract(context: Context) {
+        val am = context.getSystemService(AlarmManager::class.java)
+        val at = nextContract()
+        try {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, contractIntent(context))
+        } catch (_: SecurityException) {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, contractIntent(context))
+        }
+    }
+
+    fun cancelContract(context: Context) {
+        context.getSystemService(AlarmManager::class.java).cancel(contractIntent(context))
+    }
 }

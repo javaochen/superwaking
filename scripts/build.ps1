@@ -21,19 +21,26 @@ $ver = Get-Content (Join-Path $proj 'version.properties') | ForEach-Object {
 
 Push-Location $proj
 try {
-    # 输出重定向到文件：Gradle 守护进程会继承控制台句柄，直接输出会让调用方管道挂住
-    $log = Join-Path $env:TEMP 'superwaking-gradle.log'
+    # 用 Start-Process + 重定向：Gradle 守护进程会继承父进程句柄，
+    # 直接在控制台跑会让调用方管道一直挂到守护进程退出。
+    $task = 'assembleDebug'
+    if ($Release) { $task = 'assembleRelease' }
+    Write-Host "task=$task release=$Release"
+    $outLog = Join-Path $env:TEMP 'superwaking-gradle.out.log'
+    $errLog = Join-Path $env:TEMP 'superwaking-gradle.err.log'
+    $proc = Start-Process -FilePath (Join-Path $gradle.FullName 'bin\gradle.bat') `
+        -ArgumentList $task -WorkingDirectory $proj -NoNewWindow -PassThru -Wait `
+        -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+    $code = $proc.ExitCode
+    Get-Content $outLog -Tail 12 -ErrorAction SilentlyContinue
+
     if ($Release) {
-        & (Join-Path $gradle.FullName 'bin\gradle.bat') assembleRelease *> $log
         $apk = Join-Path $proj 'app\build\outputs\apk\release\app-release.apk'
         $name = "superwaking-$ver.apk"
     } else {
-        & (Join-Path $gradle.FullName 'bin\gradle.bat') assembleDebug *> $log
         $apk = Join-Path $proj 'app\build\outputs\apk\debug\app-debug.apk'
         $name = 'superwaking-debug.apk'
     }
-    $code = $LASTEXITCODE
-    Get-Content $log -Tail 12
 
     if ($code -ne 0) { throw "Gradle 构建失败（退出码 $code），不复制旧产物" }
 

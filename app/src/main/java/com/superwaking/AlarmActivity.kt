@@ -40,6 +40,12 @@ class AlarmActivity : Activity() {
         val input = findViewById<EditText>(R.id.input)
         val error = findViewById<TextView>(R.id.error)
         findViewById<TextView>(R.id.target).text = store.sentence
+        val freshContract = store.contract.isNotBlank() &&
+            System.currentTimeMillis() - store.contractAt < 36 * 60 * 60 * 1000L
+        if (freshContract) {
+            findViewById<TextView>(R.id.contract).text = "你昨晚写的：${store.contract}"
+        }
+
         findViewById<TextView>(R.id.count).text = if (store.ringCount > 1) {
             "第 ${store.ringCount} 次响了。你已经拖了 ${(store.ringCount - 1) * 2} 分钟。"
         } else {
@@ -84,8 +90,10 @@ class AlarmActivity : Activity() {
     private fun dismissAndClose(store: Store) {
         Diagnostics.log(this, "dismiss_ok")
         done = true
+        val rings = store.ringCount
         store.chainActive = false
         store.ringCount = 0
+        store.streak = if (rings <= 1) store.streak + 1 else 0
         AlarmScheduler.cancel(this)
 
         val now = System.currentTimeMillis()
@@ -107,6 +115,11 @@ class AlarmActivity : Activity() {
 
         getSystemService(NotificationManager::class.java).cancel(AlarmService.NOTIF_ID)
         stopService(Intent(this, AlarmService::class.java))
+        startActivity(
+            Intent(this, DoneActivity::class.java)
+                .putExtra("ringCount", rings)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        )
         finish()
     }
 

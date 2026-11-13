@@ -55,6 +55,24 @@ class Store(context: Context) {
         get() = sp.getInt("ringCount", 0)
         set(v) = sp.edit().putInt("ringCount", v).apply()
 
+    /** 睡前写的“明天起床后第一件事” */
+    var contract: String
+        get() = sp.getString("contract", "") ?: ""
+        set(v) = sp.edit().putString("contract", v).apply()
+
+    var contractAt: Long
+        get() = sp.getLong("contractAt", 0L)
+        set(v) = sp.edit().putLong("contractAt", v).apply()
+
+    /** 连续“第一次响铃就完成”的天数 */
+    var streak: Int
+        get() = sp.getInt("streak", 0)
+        set(v) = sp.edit().putInt("streak", v).apply()
+
+    var contractReminder: Boolean
+        get() = sp.getBoolean("contractReminder", true)
+        set(v) = sp.edit().putBoolean("contractReminder", v).apply()
+
     /** 上次检查更新的时间戳，用于 24 小时节流 */
     var lastCheck: Long
         get() = sp.getLong("lastCheck", 0L)

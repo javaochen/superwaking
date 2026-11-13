@@ -32,6 +32,7 @@ class MainActivity : Activity() {
     private lateinit var perms: TextView
     private lateinit var picker: TimePicker
     private lateinit var sentence: EditText
+    private lateinit var contractField: EditText
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,6 +43,8 @@ class MainActivity : Activity() {
         perms = findViewById(R.id.perms)
         picker = findViewById(R.id.timePicker)
         sentence = findViewById(R.id.sentence)
+        contractField = findViewById(R.id.contract)
+        contractField.setText(store.contract)
 
         picker.setIs24HourView(true)
         picker.hour = store.hour
@@ -69,6 +72,23 @@ class MainActivity : Activity() {
         super.onResume()
         refresh()
         autoCheckUpdate()
+        if (store.contractReminder && store.enabled) AlarmScheduler.scheduleContract(this)
+
+        if (intent?.getBooleanExtra("open_contract", false) == true) {
+            intent.removeExtra("open_contract")
+            contractField.requestFocus()
+            toast("写下明天起床后要做的第一件事，然后点「保存并启用」")
+        }
+    }
+
+    override fun onPause() {
+        // 契约随手写，不要求记得按保存
+        val text = contractField.text.toString().trim()
+        if (text != store.contract) {
+            store.contract = text
+            store.contractAt = System.currentTimeMillis()
+        }
+        super.onPause()
     }
 
     /** 每 24 小时最多静默检查一次；发现新版仍会弹窗 */
@@ -103,6 +123,11 @@ class MainActivity : Activity() {
 
     private fun applySave(text: String, h: Int, m: Int) {
         store.sentence = text
+        val contract = contractField.text.toString().trim()
+        if (contract != store.contract) {
+            store.contract = contract
+            store.contractAt = System.currentTimeMillis()
+        }
         store.hour = h
         store.minute = m
         store.pendingDisableAt = 0
@@ -116,6 +141,7 @@ class MainActivity : Activity() {
         val t = AlarmScheduler.nextTrigger(store.hour, store.minute)
         store.nextAt = t
         AlarmScheduler.schedule(this, t)
+        if (store.contractReminder) AlarmScheduler.scheduleContract(this)
 
         if (!AlarmScheduler.canScheduleExact(this)) {
             toast("未授予「精确闹钟」权限，可能被延迟，请点权限按钮")

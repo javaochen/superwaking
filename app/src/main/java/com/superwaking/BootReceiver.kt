@@ -18,5 +18,6 @@ class BootReceiver : BroadcastReceiver() {
         }
         AlarmScheduler.schedule(context, triggerAt)
         store.nextAt = triggerAt
+        if (store.contractReminder) AlarmScheduler.scheduleContract(context)
     }
 }
