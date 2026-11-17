@@ -33,10 +33,17 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "直连失败，走代理重试"
     git -c http.proxy=http://127.0.0.1:17890 push origin main
 }
+if ($LASTEXITCODE -ne 0) {
+    throw "推送 main 失败：代理未运行且 github.com 不可达。恢复代理后重跑本脚本，或改用 SSH 通道。"
+}
+
 git push origin "v$Version"
 if ($LASTEXITCODE -ne 0) {
     git -c http.proxy=http://127.0.0.1:17890 push origin "v$Version"
 }
+if ($LASTEXITCODE -ne 0) { throw "推送 tag v$Version 失败" }
 
 gh release create "v$Version" $apk --title "v$Version" --notes "构建自 $((git rev-parse --short HEAD))"
+if ($LASTEXITCODE -ne 0) { throw "创建 GitHub Release 失败（tag 已推送，可稍后手动 gh release create）" }
+
 Write-Host "已发布：https://github.com/javaochen/superwaking/releases/tag/v$Version"
