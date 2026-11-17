@@ -5,10 +5,14 @@ import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.WindowManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+
+private const val QUIET_MS = 30_000L
 
 /**
  * 响铃界面：覆盖锁屏、常亮、吞掉返回键。
@@ -17,6 +21,8 @@ import android.widget.TextView
 class AlarmActivity : Activity() {
 
     private var done = false
+
+    private var quietActive = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +58,17 @@ class AlarmActivity : Activity() {
             "第一次响。把它当作今天的第一件事。"
         }
 
+        // 打字就安静 30 秒：手在动说明人醒了，没必要继续吵别人。
+        // 停手 30 秒、离开界面或熄屏，振动自动回来。
+        input.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                quietActive = true
+                tellService(AlarmService.ACTION_QUIET, QUIET_MS)
+            }
+        })
+
         findViewById<Button>(R.id.btnDone).setOnClickListener {
             if (normalize(input.text.toString()) == normalize(store.sentence)) {
                 dismissAndClose(store)
@@ -75,6 +92,22 @@ class AlarmActivity : Activity() {
     override fun onStop() {
         super.onStop()
         Diagnostics.log(this, "activity_stop done=$done")
+        // 人离开输入界面就恢复振动，静音只服务于“正在打字”
+        if (!done && quietActive) {
+            quietActive = false
+            tellService(AlarmService.ACTION_LOUD, 0L)
+        }
+    }
+
+    private fun tellService(action: String, ms: Long) {
+        try {
+            val i = Intent(this, AlarmService::class.java).setAction(action)
+            if (action == AlarmService.ACTION_QUIET) {
+                i.putExtra(AlarmService.EXTRA_QUIET_MS, ms)
+            }
+            startService(i)
+        } catch (_: Exception) {
+        }
     }
 
     override fun onDestroy() {

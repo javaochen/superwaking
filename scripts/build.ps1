@@ -1,4 +1,4 @@
-param([switch]$Release)
+﻿param([switch]$Release)
 
 # 构建 APK（便携工具链，不动系统环境变量）
 $ErrorActionPreference = 'Stop'
@@ -29,10 +29,17 @@ try {
     $outLog = Join-Path $env:TEMP 'superwaking-gradle.out.log'
     $errLog = Join-Path $env:TEMP 'superwaking-gradle.err.log'
     $proc = Start-Process -FilePath (Join-Path $gradle.FullName 'bin\gradle.bat') `
-        -ArgumentList $task -WorkingDirectory $proj -NoNewWindow -PassThru -Wait `
+        -ArgumentList $task -WorkingDirectory $proj -NoNewWindow -PassThru `
         -RedirectStandardOutput $outLog -RedirectStandardError $errLog
-    $code = $proc.ExitCode
+    # 不能用 -Wait：它会连 Kotlin/Gradle 守护进程一起等，而守护进程常驻不退出
+    if (-not $proc.WaitForExit(600000)) {
+        try { $proc.Kill() } catch { }
+        throw "构建超时（>10 分钟）"
+    }
+    $logText = Get-Content $outLog -Raw -ErrorAction SilentlyContinue
     Get-Content $outLog -Tail 12 -ErrorAction SilentlyContinue
+    # 进程对象偶尔拿不到 ExitCode，直接看 Gradle 的成功标记更可靠
+    $code = if ($logText -match 'BUILD SUCCESSFUL') { 0 } else { 1 }
 
     if ($Release) {
         $apk = Join-Path $proj 'app\build\outputs\apk\release\app-release.apk'

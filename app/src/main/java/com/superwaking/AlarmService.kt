@@ -35,8 +35,16 @@ class AlarmService : Service() {
     private val escHandler = Handler(Looper.getMainLooper())
     private var effect: VibrationEffect? = null
 
+    /** 静音截止时间：输入正确前缀时由界面申请，避免打字时打扰别人 */
+    private var quietUntil = 0L
+
     private val burst = object : Runnable {
         override fun run() {
+            val now = System.currentTimeMillis()
+            if (now < quietUntil) {
+                handler.postDelayed(this, (quietUntil - now).coerceAtMost(5_000L))
+                return
+            }
             val v = vibrator ?: return
             val e = effect ?: return
             try {
@@ -52,7 +60,8 @@ class AlarmService : Service() {
         override fun onReceive(c: Context, intent: Intent) {
             if (intent.action != Intent.ACTION_SCREEN_OFF) return
             Diagnostics.log(this@AlarmService, "screen_off -> re-vibrate")
-            // 系统会把不可见窗口的振动掐掉，这里立刻重发一次
+            // 熄屏说明人已经离开输入界面，静音一律作废
+            quietUntil = 0L
             handler.removeCallbacks(burst)
             burst.run()
             repostNotification()
@@ -92,9 +101,25 @@ class AlarmService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Diagnostics.log(this, "service_cmd action=${intent?.action ?: "null"} startId=$startId")
-        if (intent?.action == ACTION_STOP) {
-            stopSelf()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_STOP -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
+            ACTION_QUIET -> {
+                val ms = intent.getLongExtra(EXTRA_QUIET_MS, 0L).coerceIn(1_000L, 30_000L)
+                quietUntil = System.currentTimeMillis() + ms
+                vibrator?.cancel()
+                handler.removeCallbacks(burst)
+                burst.run()
+                return START_STICKY
+            }
+            ACTION_LOUD -> {
+                quietUntil = 0L
+                handler.removeCallbacks(burst)
+                burst.run()
+                return START_STICKY
+            }
         }
         bringToFront()
         return START_STICKY
@@ -206,6 +231,9 @@ class AlarmService : Service() {
         const val NOTIF_ID = 9001
         const val CHANNEL_ID = "alarm_ring"
         const val ACTION_STOP = "com.superwaking.action.STOP"
+        const val ACTION_QUIET = "com.superwaking.action.QUIET"
+        const val ACTION_LOUD = "com.superwaking.action.LOUD"
+        const val EXTRA_QUIET_MS = "quiet_ms"
 
         /** 一次脉冲 3.0 秒，间隔 3.2 秒后重发 */
         private const val BURST_GAP_MS = 3200L

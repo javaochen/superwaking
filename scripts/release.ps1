@@ -1,4 +1,4 @@
-param([string]$Version, [int]$Code)
+﻿param([string]$Version, [int]$Code)
 
 # 一键发布：改版本号 → release 构建 → 提交打 tag → 推送 → 建 GitHub Release
 $ErrorActionPreference = 'Stop'
